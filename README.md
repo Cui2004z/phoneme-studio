@@ -1,8 +1,5 @@
 # Phoneme Studio — Assessment 1
 
-**Student:** Samuel Karanja  
-**Student number:** 22301707
-
 This project was created by running the required command in an empty directory:
 
 ```bash
@@ -33,9 +30,8 @@ The project uses Next.js static export (`output: 'export'`). The production webs
 1. Open Wordle or Word Search and set the title, instructions, difficulty and support options.
 2. Play the live student preview.
 3. Select **Generate HTML**. Open the downloaded `.html` file in a normal browser; no internet connection or additional files are needed.
-4. Record your personal demonstration and verbal justification using the guide on About. Select a local video to preview it, or provide a direct HTTPS video URL.
 
-Samuel Karanja and 22301707 appear by default on the About page and in the footer. Theme, layout and optional edited details are saved in browser cookies. Blank preferences from the earlier version fall back to these supplied details.
+Theme and layout preferences are saved in browser cookies.
 
 ## Component structure
 
@@ -62,10 +58,6 @@ Word Search adapts `Phoneme Word Search.html`. Its five-word Assessment 1 preset
 Activities include sound hints on hover and focus, optional English cues, keyboard navigation, untimed gameplay, visible focus indicators and feedback expressed with text and symbols as well as colour. Word Search supports pointer dragging, two-click/tap selection, arrow-key navigation and answer reveal. Reveal does not mark words as found. Drag paths preserve their actual start and end, including reverse and diagonal drags.
 
 There is no student tracking, account system or dynamic word-list management in Assessment 1. The fixed word data can be replaced with database-backed content in Assessment 2. Offline files contain their answers and are intended for learning, rather than secure tests. The supplied broad HCE transcriptions are retained. Multi-character sounds, including tʃ, dʒ, æɪ, ʉː and ɪə, each occupy one tile. The source uses both Latin g and IPA ɡ for the same sound; game data canonicalises these to ɡ while keeping the original JSON transcriptions and source files unchanged.
-
-## Video
-
-Your personal recording is still required. About includes a recording guide covering the workflow, design decisions, component structure, accessibility, usability and frontend trade-offs. A locally selected video is previewed only; it is not uploaded or included in the published site. A hosted recording can be configured with a direct video URL.
 
 ## Original development history
 
