@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: file:/app/data/studio.db
+    volumes:
+      - phoneme-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  phoneme-data:

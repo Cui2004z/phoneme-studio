@@ -1,6 +1,6 @@
-import { LEVELS, PHONEMES, getTarget, getSearchWords, type ActivityConfig } from './data';
-import { makePuzzle, scoreGuess, selectionLine } from './engine';
-import { activityRuntime } from './runtime';
+import type { ActivityConfig, ActivityContent } from "./data";
+import { makePuzzle, scoreGuess, selectionLine } from "./engine";
+import { activityRuntime } from "./runtime";
 export const GAME_CSS = `
 *{box-sizing:border-box}body{--bg:#fff;--text:#25263a;--muted:#666b7f;--line:#e3e5ed;--subtle:#f5f5fa;--brand:#5b4cdd;--onbrand:#fff;margin:0;background:var(--bg);color:var(--text);font:16px/1.5 'Segoe UI',Arial,sans-serif}body.dark{--bg:#202330;--text:#f2f1fc;--muted:#b9bfd4;--line:#45495e;--subtle:#2e3243;--brand:#b5a7ff;--onbrand:#201742}.activity{max-width:720px;padding:30px 26px 22px;margin:auto}button{font:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible{outline:3px solid var(--brand);outline-offset:3px}button:disabled{cursor:default;opacity:.55}.masthead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:24px}.mini-brand{font-size:13px;font-weight:700;letter-spacing:-.2px;color:var(--brand);display:flex;gap:7px;align-items:center}.mini-brand svg{width:23px;height:23px}.level{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:20px}.activity-kind{font-size:12px;letter-spacing:1.8px;color:var(--brand);font-weight:700;text-align:center;margin:0 0 8px}h1{text-align:center;font-size:25px;font-weight:750;letter-spacing:-.65px;line-height:1.25;margin:0 0 10px;overflow-wrap:anywhere}.instructions{text-align:center;font-size:16px;color:var(--muted);max-width:450px;line-height:1.6;margin:0 auto 21px;white-space:pre-wrap;overflow-wrap:anywhere}.game-meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);max-width:340px;margin:0 auto 12px}.wordle-board{display:grid;grid-template-columns:repeat(var(--columns),1fr);gap:6px;max-width:234px;margin:auto}.tile{height:45px;border:1.5px solid var(--line);background:var(--subtle);border-radius:5px;display:flex;align-items:center;justify-content:center;position:relative;font-size:25px;font-weight:650}.tile.active-row{background:var(--bg);border-color:#a49bcf}.tile-mark{position:absolute;right:3px;bottom:0;font-size:12px}.correct{background:#3c846a!important;color:#fff!important;border-color:#3c846a!important}.present{background:#ecd08a!important;color:#624715!important;border-color:#ecd08a!important}.absent{background:#70768a!important;color:#fff!important;border-color:#70768a!important}.legend{display:flex;justify-content:center;gap:11px;margin:15px 0;font-size:12px;color:var(--muted);flex-wrap:wrap}.legend>span{display:flex;align-items:center;gap:4px}.legend i{width:14px;height:14px;border-radius:3px;text-align:center;font-size:12px;font-style:normal}.message{font-size:12px;color:var(--muted);min-height:38px;text-align:center;margin:12px 0;line-height:1.6}.message.success{color:var(--brand);background:var(--subtle);border:1px solid var(--brand);padding:12px;border-radius:7px;font-weight:600}.keyboard{max-width:490px;margin:auto}.key-label{font-size:12px;letter-spacing:.65px;color:var(--muted);margin:9px 0 6px;text-transform:uppercase}.key-row{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}.sound-key{min-width:0;min-height:41px;padding:3px 1px;background:var(--subtle);border:1px solid var(--line);color:var(--text);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-direction:column}.sound-key:hover{border-color:var(--brand);color:var(--brand)}.sound-key .symbol{font-size:18px;line-height:1.1}.sound-key small{font-size:12px;color:var(--muted);margin-top:3px}.game-actions{display:flex;gap:9px;margin:16px auto 8px;max-width:490px}.delete-button,.check-button{border-radius:6px;padding:9px 16px;font-size:12px;font-weight:600;min-height:40px}.delete-button{border:1px solid var(--line);background:var(--bg);color:var(--text)}.check-button{background:var(--brand);color:var(--onbrand);border:1px solid var(--brand);flex:1}.sound-hint{color:var(--muted);font-size:12px;text-align:center;min-height:18px;margin:10px 0}.restart{display:block;margin:14px auto 0;background:transparent;border:0;color:var(--muted);padding:8px 14px;font-size:12px;text-decoration:underline;text-underline-offset:3px}.activity-footer{border-top:1px solid var(--line);font-size:12px;text-align:center;color:var(--muted);margin-top:22px;padding-top:13px}.directions{text-align:center;font-size:12px;color:var(--muted);margin:9px 0 16px}.search-board{touch-action:none;max-width:540px;margin:auto;display:grid;grid-template-columns:repeat(var(--size),minmax(0,1fr));gap:4px}.search-cell{padding:0;min-height:28px;border:1px solid var(--line);background:var(--subtle);color:var(--text);border-radius:5px;aspect-ratio:1;min-width:0;font-size:clamp(15px,3.5vw,23px)}.search-cell:hover{border-color:var(--brand);color:var(--brand)}.search-cell.found{background:#3c846a;color:white;border-color:#3c846a}.search-cell.selected{background:var(--brand);color:var(--onbrand);border-color:var(--brand);outline:2px solid var(--brand);outline-offset:2px}.search-words{list-style:none;padding:14px 0 0;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0}.search-words li{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--subtle);font-size:16px}.search-words small{font-size:12px;color:var(--muted)}.word-status{font-size:12px;color:var(--muted)}.search-words .complete{border-color:#3c846a}.search-words .complete .word-status{color:#3c846a;font-weight:bold}noscript{display:block;padding:20px;text-align:center}
 @media(min-width:760px){.activity{padding:40px 44px}.tile{height:54px}.wordle-board{max-width:265px}.sound-key{min-height:46px}.key-row{gap:5px}.sound-key .symbol{font-size:20px}.sound-key small{font-size:12px}.activity-kind{font-size:12px}.instructions{font-size:14px}.message{font-size:14px}.legend{font-size:12px}.game-meta{font-size:12px}.sound-hint{font-size:12px}}
@@ -8,23 +8,52 @@ export const GAME_CSS = `
  .search-cell.answer:not(.found){background:#f5e4fa;color:#623572;box-shadow:inset 0 0 0 2px #b478c3}.search-cell.path-preview{background:#ecd08a;color:#624715}.search-words .complete .ipa{text-decoration:line-through}.search-board{overflow:auto}.search-cell{font-size:clamp(12px,calc(220px / var(--size)),21px)}
 @media(min-width:650px){.activity{max-width:980px}.wordle-layout{display:grid;grid-template-columns:minmax(210px,.9fr) minmax(260px,1.1fr);align-items:start;gap:26px}.wordle-layout .key-row{grid-template-columns:repeat(6,minmax(0,1fr))}.wordle-layout .key-label:first-child{margin-top:0}.wordle-layout .tile{height:52px}.wordle-layout .legend{margin-top:20px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
-function escapeHtml(value: string) { return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!)); }
-export function generateHtml(config: ActivityConfig): string {
-    const words = getSearchWords(config.wordSet);
-    const target = getTarget(config.wordId);
-    const data = { config, phonemes: PHONEMES, target, words, puzzle: config.type === 'word-search' ? makePuzzle(config.difficulty, config.seed, words, config.rows, config.cols) : null, attempts: LEVELS[config.difficulty].attempts };
-    // Escape script delimiters and line separators in all teacher-authored text.
-    const json = JSON.stringify(data).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="${config.theme}"><title>${escapeHtml(config.title)}</title><style>${GAME_CSS}</style></head><body class="${config.theme}"><main class="activity"><div class="masthead"><div class="mini-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6m5-11v16m5-13v10m5-8v6"/></svg>phoneme studio</div><span class="level" id="level"></span></div><p class="activity-kind" id="activity-kind"></p><h1 id="title"></h1><p class="instructions" id="instructions"></p><div id="game"></div><footer class="activity-footer">One tile. One sound. Take your time.</footer></main><noscript>Please enable JavaScript in your browser to play this activity.</noscript><script>(${activityRuntime.toString()})(${json},${scoreGuess.toString()},${selectionLine.toString()});</script></body></html>`;
+function escapeHtml(value: string) {
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        char
+      ]!,
+  );
 }
-export function downloadActivity(config: ActivityConfig) {
-    const html = generateHtml(config);
-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (config.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || config.type) + '.html';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+export function generateHtml(
+  config: ActivityConfig,
+  content: ActivityContent,
+): string {
+  const words = config.wordIds
+    .map((id) => content.words.find((word) => word.id === id))
+    .filter((w): w is NonNullable<typeof w> => Boolean(w));
+  const target = content.words.find((word) => word.id === config.wordId);
+  if (config.type === "wordle" && !target)
+    throw new Error("Choose a saved target word.");
+  if (
+    config.type === "word-search" &&
+    (!words.length || words.length !== config.wordIds.length)
+  )
+    throw new Error("Choose saved words from the selected list.");
+  const data = {
+    config,
+    phonemes: content.phonemes,
+    target,
+    words,
+    puzzle:
+      config.type === "word-search"
+        ? makePuzzle(
+            config.difficulty,
+            config.seed,
+            words,
+            config.rows,
+            config.cols,
+            content.level.directions,
+          )
+        : null,
+    attempts: content.level.attempts,
+  };
+  // Escape script delimiters and line separators in all teacher-authored text.
+  const json = JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="${config.theme}"><title>${escapeHtml(config.title)}</title><style>${GAME_CSS}</style></head><body class="${config.theme}"><main class="activity"><div class="masthead"><div class="mini-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6m5-11v16m5-13v10m5-8v6"/></svg>phoneme studio</div><span class="level" id="level"></span></div><p class="activity-kind" id="activity-kind"></p><h1 id="title"></h1><p class="instructions" id="instructions"></p><div id="game"></div><footer class="activity-footer">One tile. One sound. Take your time.</footer></main><noscript>Please enable JavaScript in your browser to play this activity.</noscript><script>(${activityRuntime.toString()})(${json},${scoreGuess.toString()},${selectionLine.toString()});</script></body></html>`;
 }

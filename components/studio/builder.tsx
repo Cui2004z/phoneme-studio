@@ -1,212 +1,639 @@
-'use client';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
-import Link from 'next/link';
-import { ChevronRight, Download, SlidersHorizontal, Eye, Monitor, Smartphone, RotateCcw, Info, LockKeyhole, Shuffle } from 'lucide-react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectGroup, SelectLabel, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shell } from './shell';
-import { usePreferences } from './preferences';
-import { LEVELS, HCE_CORPUS, getTarget, getSearchWords, phonemeLabel, type PhonemeWord, type ActivityConfig, type ActivityType, type Difficulty } from '@/lib/studio/data';
-import { downloadActivity, generateHtml } from '@/lib/studio/export';
-export function Field({ id, label, children, help }: {
-    id: string;
-    label: string;
-    children: ReactNode;
-    help?: string;
-}) { return <div className="field"><label htmlFor={id}>{label}</label>{children}{help && <p className="field-help" id={id + '-help'}>{help}</p>}</div>; }
-export function Toggle({ id, label, help, checked, onChange }: {
-    id: string;
-    label: string;
-    help: string;
-    checked: boolean;
-    onChange: (v: boolean) => void;
-}) { return <div className="toggle-row"><div><label htmlFor={id}>{label}</label><p id={id + '-help'}>{help}</p></div><Switch id={id} className="studio-switch" checked={checked} onCheckedChange={onChange} aria-describedby={id + '-help'}/></div>; }
-function SoundWord({word}: {word: PhonemeWord}) {
-    return <div className="target-word">
-        <div>
-            <div className="ipa" aria-label={`Target word: ${word.english}, ${word.phonemes.length} phonemes`}>
-                <span>/</span>{word.phonemes.map((sound, index) =>
-                    <Tooltip key={index}>
-                        <TooltipTrigger asChild><span tabIndex={0}>{sound}</span></TooltipTrigger>
-                        <TooltipContent>{phonemeLabel(sound)}</TooltipContent>
-                    </Tooltip>)}<span>/</span>
-            </div>
-            <small>{word.english.toUpperCase()} · {word.phonemes.length} phonemes</small>
-        </div>
-        <LockKeyhole size={15} className="muted"/>
-    </div>;
-}
-function GridDimension({id, label, value, onChange}: {id: string; label: string; value: number; onChange: (value: number) => void}) {
-    return <Field id={id} label={label}>
-        <input key={value} id={id} className="text-input" type="number" min={6} max={16} step={1}
-            defaultValue={value} aria-describedby="grid-size-help"
-            onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-            onBlur={event => {
-                const next = Number(event.currentTarget.value);
-                if (Number.isInteger(next) && next >= 6 && next <= 16) onChange(next);
-                else {
-                    event.currentTarget.value = String(value);
-                    toast.error('Use a whole number between 6 and 16.');
-                }
-            }}/>
-    </Field>;
-}
-function ConfigPanel({config, change, onGenerate}: {
-    config: ActivityConfig;
-    change: (value: Partial<ActivityConfig>) => void;
-    onGenerate: () => void;
+"use client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  ChevronRight,
+  Download,
+  SlidersHorizontal,
+  Eye,
+  Monitor,
+  Smartphone,
+  RotateCcw,
+  Save,
+  Shuffle,
+  FolderOpen,
+  Plus,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Shell } from "./shell";
+import { Field, Toggle, ErrorNotice } from "./forms";
+import { usePreferences } from "./preferences";
+import {
+  DEFAULTS,
+  phonemeLabel,
+  type ActivityConfig,
+  type ActivityType,
+  type ActivityContent,
+  type Catalog,
+  type WordListSummary,
+  type WordListDetail,
+  type SavedActivity,
+  type Difficulty,
+} from "@/lib/studio/data";
+import { generateHtml } from "@/lib/studio/export";
+import { api, send } from "@/lib/client/api";
+import { downloadSavedActivity } from "@/lib/client/download";
+
+function LivePreview({
+  config,
+  content,
+}: {
+  config: ActivityConfig;
+  content: ActivityContent | null;
 }) {
-    const wordle = config.type === 'wordle';
-    const target = getTarget(config.wordId);
-    const words = getSearchWords(config.wordSet);
-    function setDifficulty(value: Difficulty) {
-        const level = LEVELS[value];
-        change(wordle ? {difficulty: value} : {difficulty: value, rows: level.size, cols: level.size});
+  const [size, setSize] = useState("desktop"),
+    [restart, setRestart] = useState(0);
+  const preview = useMemo(() => {
+    if (!content)
+      return { html: "", error: "Choose a saved list and words to begin." };
+    try {
+      return { html: generateHtml(config, content), error: "" };
+    } catch (e) {
+      return { html: "", error: (e as Error).message };
     }
-    return <section className="config-panel" aria-label="Activity configuration">
-        <div className="panel-heading"><SlidersHorizontal size={16}/>Activity settings</div>
-        <div className="config-body">
-            <div className="form-section">
-                <p className="section-title">1 · The basics</p>
-                <Field id="activity-title" label="Activity title">
-                    <input id="activity-title" className={'text-input' + (!config.title.trim() ? ' invalid' : '')}
-                        value={config.title} onChange={event => change({title: event.target.value})} maxLength={70}
-                        aria-invalid={!config.title.trim()} aria-describedby={!config.title.trim() ? 'title-error' : undefined}/>
-                    {!config.title.trim() && <span id="title-error" className="error-text">Add a title before generating your activity.</span>}
-                </Field>
-                <Field id="instructions" label="Student instructions">
-                    <textarea id="instructions" className="text-input" value={config.instructions}
-                        onChange={event => change({instructions: event.target.value})} maxLength={350}/>
-                </Field>
-                <Field id="difficulty" label="Difficulty" help={wordle
-                    ? `${LEVELS[config.difficulty].attempts} guesses to find the ${target.phonemes.length}-sound word.`
-                    : `${config.rows} × ${config.cols} grid. ${LEVELS[config.difficulty].description}.`}>
-                    <Select value={config.difficulty} onValueChange={value => setDifficulty(value as Difficulty)}>
-                        <SelectTrigger id="difficulty" className="select-control" aria-describedby="difficulty-help"><SelectValue/></SelectTrigger>
-                        <SelectContent>{Object.entries(LEVELS).map(([key, level]) =>
-                            <SelectItem key={key} value={key}>{level.label} · {wordle ? `${level.attempts} guesses` : level.description}</SelectItem>
-                        )}</SelectContent>
-                    </Select>
-                </Field>
-                {!wordle && <>
-                    <div className="grid-dimensions">
-                        <GridDimension id="grid-rows" label="Rows" value={config.rows} onChange={rows => change({rows})}/>
-                        <GridDimension id="grid-cols" label="Columns" value={config.cols} onChange={cols => change({cols})}/>
-                    </div>
-                    <p className="field-help" id="grid-size-help">Use 6–16 rows and columns. Changing difficulty restores its suggested grid size.</p>
-                </>}
-            </div>
-            <div className="form-section">
-                <p className="section-title">2 · Sounds & support</p>
-                {wordle ? <>
-                    <Field id="focus-word" label="Focus word" help="Choose one answer from the supplied 90-word HCE corpus.">
-                        <Select value={config.wordId} onValueChange={wordId => change({wordId})}>
-                            <SelectTrigger id="focus-word" className="select-control" aria-describedby="focus-word-help"><SelectValue/></SelectTrigger>
-                            <SelectContent>{[3,4,5].map(length => <SelectGroup key={length}>
-                                <SelectLabel>{length} phonemes · 30 words</SelectLabel>
-                                {HCE_CORPUS.filter(word => word.phonemes.length === length).map(word =>
-                                    <SelectItem key={word.english} value={word.english}>{word.english} · /{word.phonemes.join('')}/</SelectItem>
-                                )}
-                            </SelectGroup>)}</SelectContent>
-                        </Select>
-                    </Field>
-                    <SoundWord word={target}/>
-                    <p className="field-help" style={{marginTop: 8}}>The student sees this answer when the round ends.</p>
-                </> : <>
-                    <Field id="word-set" label="Word set" help="Examples from your supplied Phoneme Word Search file.">
-                        <Select value={config.wordSet} onValueChange={value => change({wordSet: value as 'starter' | 'full'})}>
-                            <SelectTrigger id="word-set" className="select-control" aria-describedby="word-set-help"><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="starter">Assessment 1 · 5 words</SelectItem>
-                                <SelectItem value="full">All supplied examples · 10 words</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </Field>
-                    <ul className="fixed-word-list" aria-label="Supplied phoneme word list">
-                        {words.map(word => <li key={word.english}><span className="ipa">/{word.phonemes.join(' ')}/</span><span className="muted">{word.english}</span></li>)}
-                    </ul>
-                    <Button variant="outline" className="w-full mt-3" onClick={() => change({seed: config.seed + 1})}><Shuffle size={14}/>New arrangement</Button>
-                </>}
-                <Toggle id="phoneme-hints" label="Phoneme hints" help="Sound examples on hover and focus." checked={config.hints} onChange={hints => change({hints})}/>
-                <Toggle id="english-labels" label={wordle ? 'Keyboard letter labels' : 'English word labels'}
-                    help={wordle ? 'Show a familiar letter cue below each sound.' : 'Show English words beside the phonemes.'}
-                    checked={config.labels} onChange={labels => change({labels})}/>
-                <div className="small-info"><Info size={15}/><span>Broad HCE transcription. Each phoneme stays in one tile, including /tʃ/, /æɪ/ and /ʉː/.</span></div>
-            </div>
-            <div className="download-zone">
-                <Button className="primary-button" onClick={onGenerate} disabled={!config.title.trim()}><Download size={16}/>Generate HTML</Button>
-                <p>One file. Playable offline in your browser.</p>
-            </div>
+  }, [config, content]);
+  return (
+    <section className="preview-panel" aria-label="Live student preview">
+      <div className="preview-toolbar">
+        <div className="preview-title">
+          <Eye size={16} />
+          Student preview<span className="tag">Interactive</span>
         </div>
-    </section>;
+        <div className="preview-actions">
+          {[
+            { name: "desktop", label: "Desktop preview", icon: Monitor },
+            { name: "mobile", label: "Phone preview", icon: Smartphone },
+          ].map((v) => (
+            <button
+              key={v.name}
+              className="icon-button"
+              aria-label={v.label}
+              aria-pressed={size === v.name}
+              onClick={() => setSize(v.name)}
+            >
+              <v.icon size={16} />
+            </button>
+          ))}
+          <button
+            className="icon-button"
+            aria-label="Restart preview"
+            onClick={() => setRestart((v) => v + 1)}
+          >
+            <RotateCcw size={15} />
+          </button>
+        </div>
+      </div>
+      <div className={"preview-stage " + size}>
+        {preview.html ? (
+          <iframe
+            key={restart}
+            srcDoc={preview.html}
+            title={"Playable phoneme " + config.type + " preview"}
+            sandbox="allow-scripts"
+            style={{
+              minHeight:
+                config.type === "wordle"
+                  ? content!.level.attempts * 53 + 550
+                  : 830,
+            }}
+          />
+        ) : (
+          <div className="empty-state">
+            <Eye size={26} />
+            <h2>Ready for your content</h2>
+            <p>{preview.error}</p>
+          </div>
+        )}
+      </div>
+      <div className="preview-caption">
+        Preview your changes here. Downloading saves the activity first and
+        generates it from the database.
+      </div>
+    </section>
+  );
 }
-function IconAction({ label, children, onClick, pressed }: {
-    label: string;
-    children: ReactNode;
-    onClick: () => void;
-    pressed?: boolean;
-}) { return <Tooltip><TooltipTrigger asChild><button className="icon-button" aria-label={label} aria-pressed={pressed} onClick={onClick}>{children}</button></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>; }
-function LivePreview({ config }: {
-    config: ActivityConfig;
-}) { const [size, setSize] = useState<'desktop' | 'mobile'>('desktop'); const [restart, setRestart] = useState(0); const html = useMemo(() => generateHtml(config), [config]); return <section className="preview-panel" aria-label="Live student preview"><div className="preview-toolbar"><div className="preview-title"><Eye size={16}/>Student preview<span className="tag">Interactive</span></div><div className="preview-actions"><IconAction label="Desktop preview" pressed={size === 'desktop'} onClick={() => setSize('desktop')}><Monitor size={16}/></IconAction><IconAction label="Phone preview" pressed={size === 'mobile'} onClick={() => setSize('mobile')}><Smartphone size={16}/></IconAction><IconAction label="Restart preview" onClick={() => setRestart(v => v + 1)}><RotateCcw size={15}/></IconAction></div></div><div className={'preview-stage ' + size}><iframe key={restart} srcDoc={html} title={config.type === 'wordle' ? 'Playable phoneme Wordle preview' : 'Playable phoneme Word Search preview'} sandbox="allow-scripts" style={{ minHeight: config.type === 'wordle' ? (LEVELS[config.difficulty].attempts * 53 + 550) : 830 }}/></div><div className="preview-caption">Try it exactly as your students will. Changing settings restarts the preview.</div></section>; }
-/** Optional WebMCP uses the same configuration and export actions as the visible controls. */
-function useBuilderTools(config: ActivityConfig, change: (p: Partial<ActivityConfig>) => void) {
-    const current = useRef({ config, change });
-    current.current = { config, change };
-    useEffect(() => {
-        type Context = {
-            registerTool: (tool: Record<string, unknown>, options: {
-                signal: AbortSignal;
-            }) => void | Promise<void>;
+function selection(list: WordListDetail, type: ActivityType) {
+  return {
+    listId: list.id,
+    wordId:
+      type === "wordle"
+        ? (list.words.find(
+            (w) => w.phonemes.length >= 2 && w.phonemes.length <= 8,
+          )?.id ?? "")
+        : "",
+    wordIds:
+      type === "word-search" ? list.words.slice(0, 5).map((w) => w.id) : [],
+  };
+}
+export function BuilderPage({ type }: { type: ActivityType }) {
+  const { preferences } = usePreferences();
+  const [config, setConfig] = useState<ActivityConfig>(() => ({
+    ...DEFAULTS[type],
+    theme: preferences.theme,
+  }));
+  const [catalog, setCatalog] = useState<Catalog | null>(null),
+    [lists, setLists] = useState<WordListSummary[]>([]);
+  const [list, setList] = useState<WordListDetail | null>(null),
+    [activityId, setActivityId] = useState("");
+  const [lastSaved, setLastSaved] = useState(""),
+    [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(false),
+    [error, setError] = useState(""),
+    [wordQuery, setWordQuery] = useState("");
+  const requestNumber = useRef(0);
+  const appearance = useRef(preferences.theme);
+  useEffect(() => {
+    appearance.current = preferences.theme;
+  }, [preferences.theme]);
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      try {
+        const [nextCatalog, nextLists] = await Promise.all([
+          api<Catalog>("/api/catalog"),
+          api<WordListSummary[]>("/api/lists"),
+        ]);
+        const id = new URLSearchParams(window.location.search).get("activity");
+        const saved = id
+          ? await api<SavedActivity>("/api/activities/" + id)
+          : null;
+        if (saved && saved.config.type !== type)
+          throw new Error("Open this saved activity in its matching builder.");
+        const chosen =
+          saved?.config.listId ??
+          (type === "word-search"
+            ? nextLists.find((l) => l.wordCount > 0 && l.wordCount <= 12)?.id
+            : undefined) ??
+          nextLists[0]?.id;
+        const detail = chosen
+          ? await api<WordListDetail>("/api/lists/" + chosen)
+          : null;
+        if (!active) return;
+        setCatalog(nextCatalog);
+        setLists(nextLists);
+        setList(detail);
+        const draft = saved?.config ?? {
+          ...DEFAULTS[type],
+          theme: appearance.current,
+          ...(detail ? selection(detail, type) : {}),
         };
-        const context = (document as Document & {
-            modelContext?: Context;
-        }).modelContext;
-        if (!context?.registerTool)
-            return;
-        const lifecycle = new AbortController();
-        const register = (tool: Record<string, unknown>) => { try {
-            Promise.resolve(context.registerTool(tool, { signal: lifecycle.signal })).catch(() => { });
-        }
-        catch { /* Unsupported implementations do not affect the interface. */ } };
-        register({ name: 'configure_phoneme_activity', description: 'Update the visible activity title, difficulty, and phoneme support. This does not download the activity.', inputSchema: { type: 'object', properties: { title: { type: 'string', minLength: 1, maxLength: 70 }, difficulty: { enum: ['gentle', 'standard', 'challenge'] }, hints: { type: 'boolean' }, labels: { type: 'boolean' }, wordId: {type: 'string', enum: HCE_CORPUS.map(word => word.english)}, wordSet: {enum: ['starter', 'full']}, rows: {type: 'integer', minimum: 6, maximum: 16}, cols: {type: 'integer', minimum: 6, maximum: 16} }, additionalProperties: false }, annotations: { readOnlyHint: false }, execute: (input: unknown) => { if (!input || typeof input !== 'object' || Array.isArray(input))
-                throw new Error('Expected configuration object.'); const value = input as Record<string, unknown>; if (Object.keys(value).some(k => !['title', 'difficulty', 'hints', 'labels', 'wordId', 'wordSet', 'rows', 'cols'].includes(k)))
-                throw new Error('Unknown setting.'); if ('title' in value && (typeof value.title !== 'string' || !value.title.trim() || value.title.length > 70))
-                throw new Error('Title must contain 1–70 characters.'); if ('difficulty' in value && !['gentle', 'standard', 'challenge'].includes(String(value.difficulty)))
-                throw new Error('Unsupported difficulty.'); if ('wordId' in value && !HCE_CORPUS.some(word => word.english === value.wordId)) throw new Error('Choose a supplied HCE word.'); if ('wordSet' in value && !['starter','full'].includes(String(value.wordSet))) throw new Error('Unsupported word set.'); for (const dimension of ['rows','cols']) if (dimension in value && (typeof value[dimension] !== 'number' || !Number.isInteger(value[dimension]) || Number(value[dimension]) < 6 || Number(value[dimension]) > 16)) throw new Error('Grid dimensions must be integers from 6 to 16.'); for (const k of ['hints', 'labels'])
-                if (k in value && typeof value[k] !== 'boolean')
-                    throw new Error(k + ' must be boolean.'); flushSync(() => current.current.change(value as Partial<ActivityConfig>)); return { configuration: current.current.config }; } });
-        register({ name: 'download_phoneme_activity', description: 'Download the current playable activity as a single standalone HTML file.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: false }, execute: (input: unknown) => { if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length)
-                throw new Error('Expected an empty object.'); if (!current.current.config.title.trim())
-                throw new Error('Add an activity title first.'); downloadActivity(current.current.config); return { status: 'download_requested', activity: current.current.config.type }; } });
-        return () => lifecycle.abort();
-    }, []);
-}
-export function BuilderPage({ type }: {
-    type: ActivityType;
-}) {
-    const { preferences, activities, updateActivity } = usePreferences();
-    const draft = activities[type];
-    const config = useMemo(() => ({ ...draft, theme: preferences.theme }), [draft, preferences.theme]);
-    const name = type === 'wordle' ? 'Wordle' : 'Word Search';
-    function change(value: Partial<ActivityConfig>) {
-        if (type === 'word-search' && value.difficulty) {
-            const level = LEVELS[value.difficulty];
-            updateActivity(type, {rows: level.size, cols: level.size, ...value});
-        } else updateActivity(type, value);
+        setConfig(draft);
+        setActivityId(saved?.id ?? "");
+        setLastSaved(saved ? JSON.stringify(draft) : "");
+        setError("");
+      } catch (e) {
+        if (active) setError((e as Error).message);
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-    useBuilderTools(config, change);
-    function generate() { if (!config.title.trim())
-        return; try {
-        downloadActivity(config);
-        toast.success('Your activity is ready', { description: 'Open the downloaded HTML file in your browser to play.' });
+    void load();
+    return () => {
+      active = false;
+    };
+    // Appearance changes don't reload or discard a draft. Output theme is saved independently.
+  }, [type]);
+  function change(value: Partial<ActivityConfig>) {
+    setConfig((c) => ({ ...c, ...value }));
+    setError("");
+  }
+  async function chooseList(id: string) {
+    const request = ++requestNumber.current;
+    setListLoading(true);
+    setList(null);
+    change({ listId: id, wordId: "", wordIds: [] });
+    try {
+      const detail = await api<WordListDetail>("/api/lists/" + id);
+      if (request !== requestNumber.current) return;
+      setList(detail);
+      change(selection(detail, type));
+    } catch (e) {
+      if (request === requestNumber.current) setError((e as Error).message);
+    } finally {
+      if (request === requestNumber.current) setListLoading(false);
     }
-    catch {
-        toast.error('The activity could not be generated. Please try again.');
-    } }
-    return <Shell page={type}><nav className="breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><ChevronRight size={13}/><span aria-current="page">{name} builder</span></nav><div className="page-heading builder-heading"><div><p className="eyebrow">A LITTLE PLAY. A LOT OF LEARNING.</p><h1>Create a phoneme {name}</h1><p>Make it yours on the left. Give it a go on the right.</p></div><Button className="primary-button" onClick={generate} disabled={!config.title.trim()}><Download size={16}/>Generate HTML</Button></div><div className="builder-layout"><ConfigPanel config={config} change={change} onGenerate={generate}/><LivePreview config={config}/></div></Shell>;
+  }
+  const level = catalog?.difficulties.find((l) => l.id === config.difficulty);
+  const content = useMemo(
+    () =>
+      catalog && list && level
+        ? { words: list.words, phonemes: catalog.phonemes, level }
+        : null,
+    [catalog, list, level],
+  );
+  const dirty = JSON.stringify(config) !== lastSaved;
+  const target = list?.words.find((w) => w.id === config.wordId);
+  const eligible =
+    list?.words.filter(
+      (w) =>
+        type === "word-search" ||
+        (w.phonemes.length >= 2 && w.phonemes.length <= 8),
+    ) ?? [];
+  const ready = Boolean(
+    config.title.trim() &&
+      list &&
+      !listLoading &&
+      (type === "wordle" ? target : config.wordIds.length),
+  );
+  async function save(asNew = false): Promise<SavedActivity> {
+    const existing = activityId && !asNew;
+    const result = await api<SavedActivity>(
+      "/api/activities" + (existing ? "/" + activityId : ""),
+      send(existing ? "PUT" : "POST", config),
+    );
+    setActivityId(result.id);
+    setConfig(result.config);
+    setLastSaved(JSON.stringify(result.config));
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + "?activity=" + result.id,
+    );
+    return result;
+  }
+  async function act(download = false, asNew = false) {
+    setBusy(true);
+    setError("");
+    try {
+      const saved = await save(asNew);
+      if (download) await downloadSavedActivity(saved.id, saved.config.title);
+      toast.success(download ? "Saved and downloaded." : "Activity saved.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const name = type === "wordle" ? "Wordle" : "Word Search";
+  return (
+    <Shell page={type}>
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <Link href="/">Home</Link>
+        <ChevronRight size={13} />
+        <span>{name} builder</span>
+      </nav>
+      <div className="page-heading builder-heading">
+        <div>
+          <p className="eyebrow">YOUR SOUNDS. READY FOR CLASS.</p>
+          <h1>Create a phoneme {name}</h1>
+          <p>Choose saved content, try the activity, and take it to class.</p>
+        </div>
+        <Button
+          className="primary-button"
+          disabled={!ready || busy || loading}
+          onClick={() => void act(true)}
+        >
+          <Download size={16} />
+          {busy ? "Working…" : "Save & generate HTML"}
+        </Button>
+      </div>
+      <ErrorNotice message={error} />
+      {loading ? (
+        <div className="content-panel" role="status">
+          Loading your saved content…
+        </div>
+      ) : !catalog ? (
+        <div className="empty-state">
+          <p>The content library could not be loaded.</p>
+          <Button onClick={() => window.location.reload()}>Try again</Button>
+        </div>
+      ) : (
+        <>
+          <div className="save-toolbar">
+            <div className="save-status">
+              <span className={"status-label " + (dirty ? "unsaved" : "saved")}>
+                {activityId
+                  ? dirty
+                    ? "Unsaved changes"
+                    : "Saved activity"
+                  : "New activity"}
+              </span>
+              <span>Your settings and word choices are stored together.</span>
+            </div>
+            <div className="form-actions">
+              <Button variant="outline" asChild>
+                <Link href="/activities">
+                  <FolderOpen size={16} />
+                  Saved activities
+                </Link>
+              </Button>
+              {activityId && (
+                <Button
+                  variant="outline"
+                  disabled={!ready || busy}
+                  onClick={() => void act(false, true)}
+                >
+                  <Plus size={15} />
+                  Save as new
+                </Button>
+              )}
+              <Button disabled={!ready || busy} onClick={() => void act()}>
+                <Save size={16} />
+                Save activity
+              </Button>
+            </div>
+          </div>
+          <div className="builder-layout">
+            <section
+              className="config-panel"
+              aria-label="Activity configuration"
+            >
+              <div className="panel-heading">
+                <SlidersHorizontal size={16} />
+                Activity settings
+              </div>
+              <div className="config-body">
+                <div className="form-section">
+                  <p className="section-title">1 · The basics</p>
+                  <Field id="activity-title" label="Activity title">
+                    <input
+                      id="activity-title"
+                      className="text-input"
+                      maxLength={70}
+                      value={config.title}
+                      onChange={(e) => change({ title: e.target.value })}
+                    />
+                  </Field>
+                  <Field id="instructions" label="Student instructions">
+                    <textarea
+                      id="instructions"
+                      className="text-input"
+                      maxLength={500}
+                      rows={3}
+                      value={config.instructions}
+                      onChange={(e) => change({ instructions: e.target.value })}
+                    />
+                  </Field>
+                  <Field id="difficulty" label="Difficulty">
+                    <Select
+                      value={config.difficulty}
+                      onValueChange={(value) => {
+                        const l = catalog.difficulties.find(
+                          (l) => l.id === value,
+                        )!;
+                        change({
+                          difficulty: value as Difficulty,
+                          ...(type === "word-search"
+                            ? { rows: l.size, cols: l.size }
+                            : {}),
+                        });
+                      }}
+                    >
+                      <SelectTrigger id="difficulty" className="select-control">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {catalog.difficulties.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.label} ·{" "}
+                            {type === "wordle"
+                              ? l.attempts + " guesses"
+                              : l.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  {type === "word-search" && (
+                    <div className="grid-dimensions">
+                      {(["rows", "cols"] as const).map((key) => (
+                        <Field
+                          key={key}
+                          id={"grid-" + key}
+                          label={key === "rows" ? "Rows" : "Columns"}
+                        >
+                          <input
+                            id={"grid-" + key}
+                            className="text-input"
+                            type="number"
+                            min={6}
+                            max={16}
+                            value={config[key]}
+                            onChange={(e) =>
+                              change({ [key]: Number(e.target.value) })
+                            }
+                          />
+                        </Field>
+                      ))}
+                    </div>
+                  )}
+                  <Field id="output-theme" label="Activity theme">
+                    <Select
+                      value={config.theme}
+                      onValueChange={(value) =>
+                        change({ theme: value as "light" | "dark" })
+                      }
+                    >
+                      <SelectTrigger
+                        id="output-theme"
+                        className="select-control"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="light">Light</SelectItem>
+                        <SelectItem value="dark">Dark</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+                <div className="form-section">
+                  <p className="section-title">2 · Saved words & support</p>
+                  <Field id="word-list" label="Word list">
+                    <Select
+                      value={config.listId}
+                      onValueChange={(id) => void chooseList(id)}
+                      disabled={listLoading}
+                    >
+                      <SelectTrigger id="word-list" className="select-control">
+                        <SelectValue placeholder="Choose a word list" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lists.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name} · {l.wordCount}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Link className="text-link manage-link" href="/library">
+                    Add or edit words in the library
+                  </Link>
+                  {listLoading ? (
+                    <p role="status">Loading words…</p>
+                  ) : !eligible.length ? (
+                    <p className="field-help">
+                      This list has no suitable words. Add a word in the library
+                      {type === "wordle" ? " with 2–8 phonemes" : ""}.
+                    </p>
+                  ) : type === "wordle" ? (
+                    <>
+                      <Field id="focus-word" label="Focus word">
+                        <Select
+                          value={config.wordId}
+                          onValueChange={(wordId) => change({ wordId })}
+                        >
+                          <SelectTrigger
+                            id="focus-word"
+                            className="select-control"
+                          >
+                            <SelectValue placeholder="Choose a word" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {eligible.map((w) => (
+                              <SelectItem key={w.id} value={w.id}>
+                                {w.english} · /{w.phonemes.join("")}/
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      {target && (
+                        <div className="target-word">
+                          <div>
+                            <div className="ipa">
+                              /
+                              {target.phonemes.map((sound, i) => (
+                                <Tooltip key={i}>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0}>{sound}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {phonemeLabel(sound, catalog.phonemes)}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
+                              /
+                            </div>
+                            <small>
+                              {target.english.toUpperCase()} ·{" "}
+                              {target.phonemes.length} phonemes
+                            </small>
+                            {target.hint && (
+                              <p className="field-help">Hint: {target.hint}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Field
+                        id="choose-words"
+                        label={
+                          "Words to find · " + config.wordIds.length + "/12"
+                        }
+                      >
+                        <input
+                          id="choose-words"
+                          className="text-input"
+                          placeholder="Filter words…"
+                          value={wordQuery}
+                          onChange={(e) => setWordQuery(e.target.value)}
+                        />
+                      </Field>
+                      <div
+                        className="word-picker"
+                        role="group"
+                        aria-label="Words to include"
+                      >
+                        {eligible
+                          .filter((w) =>
+                            w.english
+                              .toLowerCase()
+                              .includes(wordQuery.toLowerCase()),
+                          )
+                          .map((w) => (
+                            <label key={w.id} className="word-choice">
+                              <input
+                                type="checkbox"
+                                checked={config.wordIds.includes(w.id)}
+                                disabled={
+                                  !config.wordIds.includes(w.id) &&
+                                  config.wordIds.length >= 12
+                                }
+                                onChange={(e) =>
+                                  change({
+                                    wordIds: e.target.checked
+                                      ? [...config.wordIds, w.id]
+                                      : config.wordIds.filter(
+                                          (id) => id !== w.id,
+                                        ),
+                                  })
+                                }
+                              />
+                              <span>
+                                <strong>{w.english}</strong>
+                                <span className="ipa">
+                                  /{w.phonemes.join(" ")}/
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full mt-3"
+                        onClick={() =>
+                          change({ seed: (config.seed + 1) % 2147483647 })
+                        }
+                      >
+                        <Shuffle size={14} />
+                        New arrangement
+                      </Button>
+                    </>
+                  )}
+                  <Toggle
+                    id="phoneme-hints"
+                    label="Phoneme & word hints"
+                    help="Sound examples and saved word clues."
+                    checked={config.hints}
+                    onChange={(hints) => change({ hints })}
+                  />
+                  <Toggle
+                    id="english-labels"
+                    label={
+                      type === "wordle"
+                        ? "Keyboard letter labels"
+                        : "English word labels"
+                    }
+                    help="Familiar letter cues alongside phonemes."
+                    checked={config.labels}
+                    onChange={(labels) => change({ labels })}
+                  />
+                </div>
+                <div className="download-zone">
+                  <Button
+                    className="primary-button"
+                    disabled={!ready || busy}
+                    onClick={() => void act(true)}
+                  >
+                    <Download size={16} />
+                    Save & generate HTML
+                  </Button>
+                  <p>One file, generated from your saved activity.</p>
+                </div>
+              </div>
+            </section>
+            <LivePreview config={config} content={content} />
+          </div>
+        </>
+      )}
+    </Shell>
+  );
 }

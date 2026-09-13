@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
-// Assessment 1 is frontend-only. Next.js exports all five routes as static pages.
 const nextConfig: NextConfig = {
-  output: "export",
-  trailingSlash: true,
+  output: "standalone",
+  serverExternalPackages: ["@prisma/client", "prisma"],
 };
 
 export default nextConfig;

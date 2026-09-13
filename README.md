@@ -1,68 +1,105 @@
-# Phoneme Studio — Assessment 1
+# Phoneme Studio — Assessment 2
 
-This project was created by running the required command in an empty directory:
+A classroom activity builder for Speech Pathology teaching. Manage phoneme word lists, prepare Wordle and Word Search activities, and download each activity as one playable HTML file.
+
+**Repository:** [Cui2004z/phoneme-studio](https://github.com/Cui2004z/phoneme-studio)
+
+## Project continuity
+
+Assessment 2 extends the Assessment 1 React interface with a Next.js backend, Prisma ORM and SQLite database. The original application was initialized in an empty directory using:
 
 ```bash
 npx create-next-app .
 ```
 
-The recommended defaults were selected: TypeScript, ESLint, Tailwind CSS and the App Router, without a `src/` directory or React Compiler. The initializer used `create-next-app@16.3.5`; its original **Initial commit from Create Next App** is preserved in the Git history archive described below. The classroom activities were then added to the generated project.
+The starter used TypeScript, ESLint, Tailwind CSS and the App Router. Its original Create Next App history is preserved in `reference/phoneme-studio-history.bundle`; the supplied corpus DOCX and example HTML are also retained in `reference/`. This version runs as a Node.js server rather than a static export.
 
 ## Run locally
 
-Requires Node.js 20.9 or newer.
+Install Node.js 22.12 or newer, then:
 
 ```bash
-npm install
+npm ci
+npm run db:setup
 npm run dev
 ```
 
-Open `http://localhost:3000`. All five pages are available: Home, About, Wordle, Word Search and Settings.
+Open [localhost:3000](http://localhost:3000). Setup creates a local `.env`, applies the committed migrations and seeds the database once. Re-running setup preserves your edits and deletions.
+
+For a production build:
 
 ```bash
 npm run build
+npm start
 ```
 
-The project uses Next.js static export (`output: 'export'`). The production website is generated in `out/` and can be served by any static web host. `npm run dev` runs the builder locally; downloaded activity files can be opened directly in a browser.
+The local database is `prisma/dev.db`. Keep it when updating the application. The source archive does not include a populated database; setup creates it reproducibly.
+
+## Run with Docker
+
+With Docker Engine or Docker Desktop running:
+
+```bash
+docker compose up --build -d
+docker compose ps
+curl -i http://localhost:3000/health
+```
+
+Open [localhost:3000](http://localhost:3000). The health response is **200 OK** when the app can query its migrated database. The container applies migrations and seeds missing initial data automatically, runs as a non-root user, and stores SQLite in the named `phoneme-data` volume.
+
+```bash
+docker compose restart
+docker compose down
+```
+
+Both commands preserve saved content. Removing the volume also removes the database. The Compose port binds to localhost; this is a trusted, single-teacher workspace without accounts or student tracking. Public multi-user hosting would need authentication, authorization and a reviewed deployment configuration.
 
 ## Classroom workflow
 
-1. Open Wordle or Word Search and set the title, instructions, difficulty and support options.
-2. Play the live student preview.
-3. Select **Generate HTML**. Open the downloaded `.html` file in a normal browser; no internet connection or additional files are needed.
+1. Open **Word library**, create a list, and add English words with space-separated phonemes and optional hints. A token such as `tʃ` or `ʉː` occupies one sound position. The phoneme keyboard helps enter symbols; its labels and examples can also be edited.
+2. Open **Wordle** or **Word Search**. Choose a saved list and target word or search words, difficulty, support options and activity appearance.
+3. Try the live student preview. Choose **Save activity** to keep the configuration, or **Save & generate HTML** to save and download it together.
+4. Reopen, edit, copy, download or delete configurations from **Saved activities**. Downloaded files work offline in a normal browser.
 
-Theme and layout preferences are saved in browser cookies.
+The seed imports the supplied 90-word HCE corpus, a five-word search list, the ten-word example list, 43 phonemes and three difficulty presets. These are database records that teachers can change, not a fixed frontend answer pool. Wordle uses one selected target per saved activity. Word Search supports up to 12 distinct phoneme sequences and 6–16 rows and columns.
 
-## Component structure
+Hints appear on hover and keyboard focus. Games support untimed play, visible focus, text and symbol feedback, and optional English cues. Interface appearance and layout preferences remain in browser cookies; classroom content and activity settings are stored in SQLite.
 
-- `app/`: Next.js App Router pages, root layout, metadata and styles.
-- `components/studio/`: reusable navigation, activity settings, live preview, preferences and page components.
-- `components/ui/`: accessible interface primitives used by the application.
-- `lib/studio/data.ts`: HCE keyboard, sound cues, built-in word choices and difficulty presets.
-- `lib/studio/hce-corpus.json`: all 90 word records extracted from the supplied DOCX, with source phoneme boundaries intact.
-- `lib/studio/hce-keyboard.json`: the 43-symbol keyboard from the same document.
-- `lib/studio/word-search-examples.json`: the ten space-tokenised examples from the supplied HTML.
-- `reference/`: unchanged copies of both supplied files for provenance.
-- `lib/studio/engine.ts`: duplicate-aware Wordle scoring, seeded word placement and selection geometry.
-- `lib/studio/runtime.js`: standalone game controls and rendering.
-- `lib/studio/export.ts`: self-contained HTML generation; preview and download use the same output.
-
-This implementation uses standard `next dev` and `next build` commands. It does not use Vinext, Vite, a database or a server API.
-
-## Assessment scope
-
-Wordle uses one selected word per activity from the supplied HCE corpus: 30 three-phoneme words, 30 four-phoneme words and 30 five-phoneme words. The default is `/tɹæɪn/` (train). The grid adapts to the selected word and allows 8, 6 or 4 guesses. It accepts phoneme sequences without dictionary validation; the corpus is the teacher’s fixed answer pool.
-
-Word Search adapts `Phoneme Word Search.html`. Its five-word Assessment 1 preset is chin, bait, jam, bad and boot; the full preset adds log, ring, fan, van and sun. Difficulty suggests 7×7, 10×10 or 12×12 grids and controls placement directions. Teachers can independently set rows and columns from 6 to 16. Filler cells use phonemes from the selected words, and every displayed word must be placed successfully. Seeded generation keeps the preview and download identical.
-
-Activities include sound hints on hover and focus, optional English cues, keyboard navigation, untimed gameplay, visible focus indicators and feedback expressed with text and symbols as well as colour. Word Search supports pointer dragging, two-click/tap selection, arrow-key navigation and answer reveal. Reveal does not mark words as found. Drag paths preserve their actual start and end, including reverse and diagonal drags.
-
-There is no student tracking, account system or dynamic word-list management in Assessment 1. The fixed word data can be replaced with database-backed content in Assessment 2. Offline files contain their answers and are intended for learning, rather than secure tests. The supplied broad HCE transcriptions are retained. Multi-character sounds, including tʃ, dʒ, æɪ, ʉː and ɪə, each occupy one tile. The source uses both Latin g and IPA ɡ for the same sound; game data canonicalises these to ɡ while keeping the original JSON transcriptions and source files unchanged.
-
-## Original development history
-
-This GitHub upload contains the completed source snapshot. The original development commits, including the initial `create-next-app` commit, are preserved in `reference/phoneme-studio-history.bundle`. To inspect them in a separate folder, run:
+## Development and verification
 
 ```bash
-git clone reference/phoneme-studio-history.bundle ../phoneme-studio-original-history
+npm run lint
+npm test
+npm run build
 ```
+
+`npm test` creates a temporary database, applies migrations, seeds it and tests the real HTTP routes. It checks CRUD, validation, relationship protection, multi-character phonemes, saved HTML output and idempotent seeding. It does not use or erase the development database.
+
+To inspect the database locally:
+
+```bash
+npm run db:studio
+```
+
+To run the same HTTP tests against an already-running Docker application:
+
+```bash
+TEST_BASE_URL=http://127.0.0.1:3000 npm run test:api
+```
+
+The test suite creates temporary test records and deletes them after successful checks. GitHub Actions also builds and starts the Docker image and verifies that data survives a container restart.
+
+## Code structure
+
+| Location             | Responsibility                                                           |
+| -------------------- | ------------------------------------------------------------------------ |
+| `app/`               | Page routes, HTTP API handlers and `/health`                             |
+| `components/studio/` | Shared shell, list editors, builders, previews and saved activities      |
+| `lib/client/`        | API requests, user-facing errors and saved-file downloads                |
+| `lib/server/`        | Prisma access, input validation, transactions and stored-data generation |
+| `lib/studio/`        | Shared types, game rules and self-contained HTML rendering               |
+| `prisma/`            | Schema, versioned migrations, one-time seed and source data              |
+| `scripts/`           | Setup, container startup and verification utilities                      |
+| `tests/`             | HTTP integration checks                                                  |
+
+See [architecture and API documentation](docs/architecture.md) for the data model, request contracts and design trade-offs.

@@ -1,0 +1,260 @@
+[
+  {
+    "symbol": "p",
+    "label": "P",
+    "example": "pen",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "t",
+    "label": "T",
+    "example": "top",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "k",
+    "label": "K",
+    "example": "cat",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "b",
+    "label": "B",
+    "example": "bad",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "d",
+    "label": "D",
+    "example": "bed",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "ɡ",
+    "label": "G",
+    "example": "gum",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "n",
+    "label": "N",
+    "example": "thin",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "m",
+    "label": "M",
+    "example": "jam",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "ŋ",
+    "label": "NG",
+    "example": "ring",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "f",
+    "label": "F",
+    "example": "fan",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "s",
+    "label": "S",
+    "example": "sun",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "θ",
+    "label": "TH",
+    "example": "thin",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "ʃ",
+    "label": "SH",
+    "example": "ship",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "v",
+    "label": "V",
+    "example": "van",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "z",
+    "label": "Z",
+    "example": "zip",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "ð",
+    "label": "TH",
+    "example": "then",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "ʒ",
+    "label": "S",
+    "example": "measure",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "l",
+    "label": "L",
+    "example": "log",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "ɹ",
+    "label": "R",
+    "example": "ring",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "w",
+    "label": "W",
+    "example": "win",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "j",
+    "label": "Y",
+    "example": "yes",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "h",
+    "label": "H",
+    "example": "hat",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "tʃ",
+    "label": "CH",
+    "example": "chin",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "dʒ",
+    "label": "J",
+    "example": "jam",
+    "kind": "consonant"
+  },
+  {
+    "symbol": "iː",
+    "label": "EE",
+    "example": "scream",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɪ",
+    "label": "I",
+    "example": "bid",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "e",
+    "label": "E",
+    "example": "bed",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "eː",
+    "label": "AIR",
+    "example": "hair",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "æ",
+    "label": "A",
+    "example": "bad",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɐ",
+    "label": "U",
+    "example": "sun",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɐː",
+    "label": "AR",
+    "example": "bark",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɜː",
+    "label": "IR",
+    "example": "bird",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ʉː",
+    "label": "OO",
+    "example": "boot",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɔ",
+    "label": "O",
+    "example": "log",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "oː",
+    "label": "OR",
+    "example": "fork",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ʊ",
+    "label": "OO",
+    "example": "book",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "æɪ",
+    "label": "AI",
+    "example": "bait",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɑe",
+    "label": "I",
+    "example": "bike",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "oɪ",
+    "label": "OI",
+    "example": "boil",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "əʉ",
+    "label": "OA",
+    "example": "boat",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "æɔ",
+    "label": "OU",
+    "example": "cloud",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ɪə",
+    "label": "EAR",
+    "example": "beard",
+    "kind": "vowel"
+  },
+  {
+    "symbol": "ə",
+    "label": "A",
+    "example": "about",
+    "kind": "vowel"
+  }
+]

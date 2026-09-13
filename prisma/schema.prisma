@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model WordList {
+  id          String     @id @default(cuid())
+  name        String
+  description String     @default("")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  words       Word[]
+  activities  Activity[]
+}
+
+model Phoneme {
+  id        String      @id @default(cuid())
+  symbol    String      @unique
+  label     String
+  example   String
+  kind      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  sounds    WordSound[]
+}
+
+model Word {
+  id            String         @id @default(cuid())
+  listId        String
+  english       String
+  englishKey    String
+  hint          String         @default("")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  list          WordList       @relation(fields: [listId], references: [id], onDelete: Cascade)
+  sounds        WordSound[]
+  targetFor     Activity[]     @relation("TargetWord")
+  activityWords ActivityWord[]
+
+  @@unique([listId, englishKey])
+}
+
+// Position preserves phoneme boundaries and repeated sounds. A token such as tʃ
+// is stored as one Phoneme.symbol string and referenced by one ordered row.
+model WordSound {
+  wordId    String
+  position  Int
+  phonemeId String
+  word      Word    @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  phoneme   Phoneme @relation(fields: [phonemeId], references: [id], onDelete: Restrict)
+
+  @@id([wordId, position])
+  @@index([phonemeId])
+}
+
+model Difficulty {
+  id          String     @id
+  label       String
+  description String
+  attempts    Int
+  size        Int
+  directions  Json
+  activities  Activity[]
+}
+
+model Activity {
+  id           String         @id @default(cuid())
+  type         String
+  title        String
+  instructions String
+  difficulty   String
+  listId       String
+  wordId       String?
+  hints        Boolean        @default(true)
+  labels       Boolean        @default(true)
+  theme        String         @default("light")
+  seed         Int            @default(42)
+  rows         Int            @default(10)
+  cols         Int            @default(10)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  list         WordList       @relation(fields: [listId], references: [id], onDelete: Restrict)
+  level        Difficulty     @relation(fields: [difficulty], references: [id], onDelete: Restrict)
+  target       Word?          @relation("TargetWord", fields: [wordId], references: [id], onDelete: Restrict)
+  words        ActivityWord[]
+
+  @@index([listId])
+  @@index([wordId])
+  @@index([difficulty])
+}
+
+model ActivityWord {
+  activityId String
+  wordId     String
+  position   Int
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  word       Word     @relation(fields: [wordId], references: [id], onDelete: Restrict)
+
+  @@id([activityId, wordId])
+  @@unique([activityId, position])
+  @@index([wordId])
+}
+
+// A marker ensures startup never re-creates teacher-deleted demo content.
+model SeedState {
+  id        String   @id
+  appliedAt DateTime @default(now())
+}
