@@ -1,22 +1,33 @@
-# Phoneme Studio — Assessment 2
+# Phoneme Studio
 
-A classroom activity builder for Speech Pathology teaching. Manage phoneme word lists, prepare Wordle and Word Search activities, and download each activity as one playable HTML file.
+A Wordle and Word Search builder for Speech Pathology teaching. Teachers can manage phoneme word lists, save activity settings and download games as standalone HTML files.
 
-**Repository:** [Cui2004z/phoneme-studio](https://github.com/Cui2004z/phoneme-studio)
+Built with Next.js, React, TypeScript, Prisma and SQLite. Assessment 2 adds database storage and APIs to the Assessment 1 frontend. The original project was created with `npx create-next-app .`.
 
-## Project continuity
+## Run with Docker
 
-Assessment 2 extends the Assessment 1 React interface with a Next.js backend, Prisma ORM and SQLite database. The original application was initialized in an empty directory using:
+Start Docker Desktop, then open a terminal in the folder containing `compose.yaml`:
 
 ```bash
-npx create-next-app .
+docker compose up --build -d
 ```
 
-The starter used TypeScript, ESLint, Tailwind CSS and the App Router. Its original Create Next App history is preserved in `reference/phoneme-studio-history.bundle`; the supplied corpus DOCX and example HTML are also retained in `reference/`. This version runs as a Node.js server rather than a static export.
+Open [localhost:3000](http://localhost:3000). Migrations and starter data are loaded automatically.
 
-## Run locally
+Check the container and database connection:
 
-Install Node.js 22.12 or newer, then:
+```bash
+docker compose ps
+curl -i http://localhost:3000/health
+```
+
+Use `curl.exe` in Windows PowerShell. A working database returns **200 OK**.
+
+Stop the app with `docker compose down`. Saved content stays in the `phoneme-data` volume. Adding `-v` removes that volume and its data.
+
+## Run without Docker
+
+Requires Node.js 22.12 or newer.
 
 ```bash
 npm ci
@@ -24,48 +35,29 @@ npm run db:setup
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Setup creates a local `.env`, applies the committed migrations and seeds the database once. Re-running setup preserves your edits and deletions.
+Open [localhost:3000](http://localhost:3000). The local database is `prisma/dev.db`. Running setup again preserves existing content.
 
-For a production build:
+For production, run `npm run build`, then `npm start`.
 
-```bash
-npm run build
-npm start
-```
+## Using the builder
 
-The local database is `prisma/dev.db`. Keep it when updating the application. The source archive does not include a populated database; setup creates it reproducibly.
+1. In **Word library**, create a list and add words, phonemes and hints. Separate sounds with spaces, for example `tʃ ɪ n` for chin.
+2. Open **Wordle** or **Word Search**, choose a saved list and select the words to use.
+3. Adjust the settings and try the preview.
+4. Select **Save & generate HTML** to save the activity and download it.
+5. Use **Saved activities** to reopen, edit or delete configurations.
 
-## Run with Docker
+Each phoneme occupies one tile, including symbols such as `tʃ` and `ʉː`. Downloaded games work offline.
 
-With Docker Engine or Docker Desktop running:
+## Database
 
-```bash
-docker compose up --build -d
-docker compose ps
-curl -i http://localhost:3000/health
-```
+The starter data comes from the supplied HCE corpus and Word Search examples. It includes the 90-word corpus, five- and ten-word search lists, 43 phonemes and three difficulty presets. Teachers can edit these records through the app.
 
-Open [localhost:3000](http://localhost:3000). The health response is **200 OK** when the app can query its migrated database. The container applies migrations and seeds missing initial data automatically, runs as a non-root user, and stores SQLite in the named `phoneme-data` volume.
+Words used by saved activities are protected from deletion. Remove their activity references first. Seeding runs once and does not restore entries that a teacher has deleted.
 
-```bash
-docker compose restart
-docker compose down
-```
+This version is intended for a single teacher running one server. It has no user accounts. Interface preferences use cookies; word lists and activity settings use SQLite.
 
-Both commands preserve saved content. Removing the volume also removes the database. The Compose port binds to localhost; this is a trusted, single-teacher workspace without accounts or student tracking. Public multi-user hosting would need authentication, authorization and a reviewed deployment configuration.
-
-## Classroom workflow
-
-1. Open **Word library**, create a list, and add English words with space-separated phonemes and optional hints. A token such as `tʃ` or `ʉː` occupies one sound position. The phoneme keyboard helps enter symbols; its labels and examples can also be edited.
-2. Open **Wordle** or **Word Search**. Choose a saved list and target word or search words, difficulty, support options and activity appearance.
-3. Try the live student preview. Choose **Save activity** to keep the configuration, or **Save & generate HTML** to save and download it together.
-4. Reopen, edit, copy, download or delete configurations from **Saved activities**. Downloaded files work offline in a normal browser.
-
-The seed imports the supplied 90-word HCE corpus, a five-word search list, the ten-word example list, 43 phonemes and three difficulty presets. These are database records that teachers can change, not a fixed frontend answer pool. Wordle uses one selected target per saved activity. Word Search supports up to 12 distinct phoneme sequences and 6–16 rows and columns.
-
-Hints appear on hover and keyboard focus. Games support untimed play, visible focus, text and symbol feedback, and optional English cues. Interface appearance and layout preferences remain in browser cookies; classroom content and activity settings are stored in SQLite.
-
-## Development and verification
+## Checks
 
 ```bash
 npm run lint
@@ -73,33 +65,16 @@ npm test
 npm run build
 ```
 
-`npm test` creates a temporary database, applies migrations, seeds it and tests the real HTTP routes. It checks CRUD, validation, relationship protection, multi-character phonemes, saved HTML output and idempotent seeding. It does not use or erase the development database.
+The tests use a temporary database. GitHub Actions also checks the Docker build, APIs and persistence after a restart. See the [test results](docs/verification.md).
 
-To inspect the database locally:
+## Project files
 
-```bash
-npm run db:studio
-```
+- `app/` — pages, API routes and the health endpoint.
+- `components/studio/` — builders, word editors and shared interface components.
+- `lib/server/` — database access and validation.
+- `lib/studio/` — game rules and HTML generation.
+- `prisma/` — schema, migrations and seed data.
+- `tests/` — API integration tests.
+- `reference/` — supplied source files and the original starter history bundle.
 
-To run the same HTTP tests against an already-running Docker application:
-
-```bash
-TEST_BASE_URL=http://127.0.0.1:3000 npm run test:api
-```
-
-The test suite creates temporary test records and deletes them after successful checks. GitHub Actions also builds and starts the Docker image and verifies that data survives a container restart.
-
-## Code structure
-
-| Location             | Responsibility                                                           |
-| -------------------- | ------------------------------------------------------------------------ |
-| `app/`               | Page routes, HTTP API handlers and `/health`                             |
-| `components/studio/` | Shared shell, list editors, builders, previews and saved activities      |
-| `lib/client/`        | API requests, user-facing errors and saved-file downloads                |
-| `lib/server/`        | Prisma access, input validation, transactions and stored-data generation |
-| `lib/studio/`        | Shared types, game rules and self-contained HTML rendering               |
-| `prisma/`            | Schema, versioned migrations, one-time seed and source data              |
-| `scripts/`           | Setup, container startup and verification utilities                      |
-| `tests/`             | HTTP integration checks                                                  |
-
-See [architecture and API documentation](docs/architecture.md) for the data model, request contracts and design trade-offs.
+[Database and API notes](docs/architecture.md) · [GitHub repository](https://github.com/Cui2004z/phoneme-studio)

@@ -1,19 +1,22 @@
-# Verification record
+# Test results
 
 Checked on 13 September 2026.
 
 | Check | Result |
 | --- | --- |
-| ESLint | Passed |
-| Next.js production build and TypeScript | Passed |
-| Fresh Prisma migration and seed | Passed: 3 lists, 105 word entries, 43 phonemes and 2 activities |
-| HTTP integration suite against development server | Passed: 11 tests |
-| HTTP integration suite against standalone production server | Passed: 11 tests |
-| Production pages and client JavaScript asset | Passed: all 7 pages and a referenced client asset returned 200 |
-| Re-running seed after use | Passed: existing content preserved |
-| Browser interaction check | Blocked by the verification environment's browser network policy; no visual or end-to-end browser result is claimed |
-| Docker build, container APIs and restart persistence | Automated in `.github/workflows/verify.yml`; see the repository Actions result |
+| ESLint and production build | Passed |
+| Fresh database migration and seed | Passed |
+| API tests on the development server | 11 passed |
+| API tests on the standalone production server | 11 passed |
+| Production pages and a client JavaScript asset | Returned 200 |
+| Repeat seed | Existing content preserved |
+| Docker build and startup | Passed |
+| Container health endpoint | 200 OK |
+| Container API tests | 11 passed |
+| Database persistence after container restart | Passed |
 
-The integration tests cover create/read/update/delete operations, unknown and malformed phonemes, multi-character token boundaries, duplicate conflicts, saved settings, current stored hints in downloads, both game payloads, script-delimiter escaping, relationship-protected deletion and rollback of invalid word edits. They send a browser-style Origin header on same-origin requests and verify foreign-origin rejection.
+[GitHub Actions run](https://github.com/Cui2004z/phoneme-studio/actions/runs/34748244170)
 
-A Docker runtime is not installed in the local verification workspace. The included GitHub Actions job performs the container-specific checks on an Ubuntu runner. Personal face/ID narration and the classroom browser demonstration must be recorded by the student using the separate walkthrough guide.
+The API tests cover CRUD, input validation, duplicate records, multi-character phonemes, saved HTML output and protected relationships. Docker checks ran on a GitHub Actions Ubuntu runner.
+
+Browser interaction testing was not completed because the test environment blocked access to the local app. The checks above do not replace a manual browser walkthrough.
